@@ -1,6 +1,6 @@
 const API_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:8000'
-  : 'https://YOUR_RAILWAY_APP.up.railway.app';
+  : 'https://my-ai-production-446f.up.railway.app';
 
 let sessions = [];
 let activeIdx = null;
