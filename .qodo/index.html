@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RupaxAI — Powered by Llama 3.2</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark:       #070b14;
+      --bg-panel:      #0d1424;
+      --bg-card:       #111827;
+      --bg-input:      #1a2235;
+      --border:        #1e2d4a;
+      --blue:          #3b82f6;
+      --blue-glow:     #3b82f640;
+      --blue-dark:     #1d4ed8;
+      --red:           #ef4444;
+      --red-glow:      #ef444430;
+      --purple:        #a855f7;
+      --purple-glow:   #a855f740;
+      --purple-dark:   #7c3aed;
+      --text-primary:  #f1f5f9;
+      --text-secondary:#94a3b8;
+      --text-muted:    #475569;
+      --accent-grad:   linear-gradient(135deg, #3b82f6, #a855f7, #ef4444);
+      --sidebar-w:     260px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      padding: 0 20px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: var(--accent-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .new-chat-btn {
+      margin: 0 16px 20px;
+      padding: 10px;
+      background: linear-gradient(135deg, var(--blue-dark), var(--purple-dark));
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .new-chat-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .sidebar-section-label {
+      padding: 0 20px 8px;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 8px;
+    }
+
+    .chat-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.83rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-item:hover { background: var(--bg-card); color: var(--text-primary); }
+    .chat-item.active {
+      background: var(--blue-glow);
+      color: #93c5fd;
+      border-left: 2px solid var(--blue);
+    }
+
+    .chat-item svg { flex-shrink: 0; }
+
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    .model-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .model-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 8px var(--blue);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    .model-info { flex: 1; overflow: hidden; }
+    .model-name { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
+    .model-status { font-size: 0.68rem; color: var(--text-muted); }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      height: 60px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+      background: var(--bg-panel);
+      flex-shrink: 0;
+    }
+
+    .topbar-title {
+      flex: 1;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.73rem;
+      font-weight: 500;
+      border: 1px solid;
+    }
+
+    .stat-pill.blue  { color: #93c5fd; border-color: #3b82f630; background: #3b82f610; }
+    .stat-pill.purple{ color: #c084fc; border-color: #a855f730; background: #a855f710; }
+    .stat-pill.red   { color: #fca5a5; border-color: #ef444430; background: #ef444410; }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      padding: 16px 24px 0;
+      flex-shrink: 0;
+    }
+
+    .stat-card {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stat-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .stat-icon.blue   { background: var(--blue-glow);   border: 1px solid #3b82f650; }
+    .stat-icon.purple { background: var(--purple-glow); border: 1px solid #a855f750; }
+    .stat-icon.red    { background: var(--red-glow);    border: 1px solid #ef444450; }
+
+    .stat-value { font-size: 1.35rem; font-weight: 700; line-height: 1; }
+    .stat-value.blue   { color: #93c5fd; }
+    .stat-value.purple { color: #c084fc; }
+    .stat-value.red    { color: #fca5a5; }
+    .stat-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+
+    /* ── CHAT AREA ── */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-area::-webkit-scrollbar { width: 4px; }
+    .chat-area::-webkit-scrollbar-track { background: transparent; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Welcome */
+    .welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      text-align: center;
+      gap: 16px;
+      padding: 40px 20px;
+    }
+
+    .welcome-icon {
+      width: 72px; height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--blue-dark), var(--purple-dark));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 0 40px #a855f740, 0 0 20px #3b82f640;
+    }
+
+    .welcome h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: var(--accent-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .welcome p { font-size: 0.9rem; color: var(--text-secondary); max-width: 420px; }
+
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    .suggestion-btn {
+      padding: 8px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .suggestion-btn:hover {
+      border-color: var(--purple);
+      color: var(--text-primary);
+      background: var(--purple-glow);
+    }
+
+    /* Messages */
+    .msg {
+      display: flex;
+      gap: 12px;
+      animation: fadeUp 0.3s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+
+    .avatar.ai {
+      background: linear-gradient(135deg, var(--blue-dark), var(--purple-dark));
+      box-shadow: 0 0 12px var(--purple-glow);
+    }
+
+    .avatar.user {
+      background: linear-gradient(135deg, var(--red), #be185d);
+    }
+
+    .bubble {
+      max-width: 72%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.875rem;
+      line-height: 1.65;
+    }
+
+    .msg.ai .bubble {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top-left-radius: 4px;
+      color: var(--text-primary);
+    }
+
+    .msg.user .bubble {
+      background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+      border-top-right-radius: 4px;
+      color: #fff;
+    }
+
+    .bubble-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .bubble-name { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+    .bubble-time { font-size: 0.68rem; color: var(--text-muted); }
+
+    /* Typing */
+    .typing-dots span {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--purple);
+      margin: 0 2px;
+      animation: bounce 1.2s infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30%           { transform: translateY(-6px); }
+    }
+
+    /* ── INPUT BAR ── */
+    .input-bar {
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-panel);
+      flex-shrink: 0;
+    }
+
+    .input-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-wrap:focus-within {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px var(--purple-glow);
+    }
+
+    #userInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      resize: none;
+      max-height: 140px;
+      min-height: 24px;
+      line-height: 1.5;
+      font-family: inherit;
+    }
+
+    #userInput::placeholder { color: var(--text-muted); }
+
+    .send-btn {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--blue-dark), var(--purple-dark));
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.2s, transform 0.15s;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover:not(:disabled) { opacity: 0.85; transform: scale(1.05); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .mic-btn {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      margin-right: 8px;
+    }
+
+    .mic-btn:hover { background: var(--bg-card); color: var(--text-primary); }
+    .mic-btn.active {
+      background: var(--red-glow);
+      border-color: var(--red);
+      color: var(--red);
+      animation: pulse 1.5s infinite;
+    }
+
+    .input-hint {
+      margin-top: 8px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* ── ERROR BANNER ── */
+    .error-banner {
+      display: none;
+      margin: 0 24px;
+      padding: 10px 14px;
+      background: var(--red-glow);
+      border: 1px solid var(--red);
+      border-radius: 10px;
+      font-size: 0.8rem;
+      color: #fca5a5;
+    }
+
+    .error-banner.show { display: flex; align-items: center; gap: 8px; }
+
+    /* ── SCROLLBAR ── */
+    .chat-list::-webkit-scrollbar { width: 3px; }
+    .chat-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-text">RupaxAI</div>
+    <div class="logo-sub">Powered by Llama 3.2 · Ollama</div>
+  </div>
+
+  <button class="new-chat-btn" onclick="newChat()">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Chat
+  </button>
+
+  <div class="sidebar-section-label">Recent Chats</div>
+  <div class="chat-list" id="chatList"></div>
+
+  <div class="sidebar-footer">
+    <div class="model-badge">
+      <div class="model-dot"></div>
+      <div class="model-info">
+        <div class="model-name">llama3.2</div>
+        <div class="model-status" id="modelStatus">Connecting…</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-title" id="chatTitle">New Conversation</div>
+    <div class="stat-pill blue">
+      <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#3b82f6"/></svg>
+      Ollama Local
+    </div>
+    <div class="stat-pill purple" id="tokenPill">0 tokens</div>
+    <div class="stat-pill red" id="msgPill">0 messages</div>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon blue">💬</div>
+      <div>
+        <div class="stat-value blue" id="statMsgs">0</div>
+        <div class="stat-label">Messages</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">🔤</div>
+      <div>
+        <div class="stat-value purple" id="statTokens">0</div>
+        <div class="stat-label">Est. Tokens</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red">⚡</div>
+      <div>
+        <div class="stat-value red" id="statSpeed">—</div>
+        <div class="stat-label">Last Response</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-banner" id="errorBanner">
+    <svg width="14" height="14" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 8v4m0 4h.01"/>
+    </svg>
+    <span id="errorText"></span>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-area" id="chatArea">
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">🤖</div>
+      <h2>Hello, I'm RupaxAI</h2>
+      <p>Your intelligent assistant powered by <strong>Llama 3.2</strong> running locally via Ollama. Ask me anything.</p>
+      <div class="suggestions">
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">Explain quantum computing</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">Write a Python web scraper</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">Debug my code</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">Summarize a topic</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">Help me write an email</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">Creative story ideas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-bar">
+    <div class="input-wrap">
+      <textarea id="userInput" rows="1" placeholder="Message RupaxAI…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="Voice Input">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+        </svg>
+      </button>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-hint">Enter to send · Shift+Enter for new line · Running on localhost:11434</div>
+  </div>
+
+</div>
+
+<script>
+  // ── CONFIG ──
+  const OLLAMA_URL = 'http://localhost:11434';
+  const MODEL      = 'llama3.2:1b';
+
+  // ── STATE ──
+  let sessions    = [];
+  let activeIdx   = null;
+  let isLoading   = false;
+  let totalTokens = 0;
+  let totalMsgs   = 0;
+
+  // ── VOICE ──
+  let recognition = null;
+  let isListening = false;
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    checkOllama();
+    loadSessions();
+  });
+
+  // ── OLLAMA HEALTH CHECK ──
+  async function checkOllama() {
+    try {
+      const r = await fetch(`${OLLAMA_URL}/api/tags`);
+      if (r.ok) {
+        document.getElementById('modelStatus').textContent = 'Online · Ready';
+        document.querySelector('.model-dot').style.background = '#22c55e';
+        document.querySelector('.model-dot').style.boxShadow  = '0 0 8px #22c55e';
+        hideError();
+      } else throw new Error();
+    } catch {
+      document.getElementById('modelStatus').textContent = 'Offline — Start Ollama';
+      document.querySelector('.model-dot').style.background = '#ef4444';
+      document.querySelector('.model-dot').style.boxShadow  = '0 0 8px #ef4444';
+      showError('Ollama not detected at localhost:11434. Run: <strong>ollama serve</strong> in your terminal.');
+    }
+  }
+
+  // ── VOICE FUNCTIONS ──
+  function toggleVoice() {
+    if (isListening) {
+      stopVoice();
+    } else {
+      startVoice();
+    }
+  }
+
+  function startVoice() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Speech recognition not supported in this browser.');
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.onstart = () => {
+      isListening = true;
+      document.getElementById('micBtn').classList.add('active');
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      document.getElementById('userInput').value = transcript;
+      autoResize(document.getElementById('userInput'));
+    };
+    recognition.onend = () => {
+      stopVoice();
+    };
+    recognition.start();
+  }
+
+  function stopVoice() {
+    if (recognition) {
+      recognition.stop();
+    }
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('active');
+  }
+
+  function speak(text) {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US'; // or detect
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      speechSynthesis.speak(utterance);
+    }
+  }
+
+  // ── SESSION MANAGEMENT ──
+  function loadSessions() {
+    try {
+      sessions = JSON.parse(localStorage.getItem('nexus_sessions') || '[]');
+    } catch { sessions = []; }
+    renderChatList();
+  }
+
+  function saveSessions() {
+    localStorage.setItem('nexus_sessions', JSON.stringify(sessions));
+  }
+
+  function newChat() {
+    const session = {
+      id: Date.now(),
+      title: 'New Chat',
+      messages: [],
+      created: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    sessions.unshift(session);
+    activeIdx = 0;
+    saveSessions();
+    renderChatList();
+    renderMessages();
+    updateStats();
+    document.getElementById('chatTitle').textContent = 'New Conversation';
+    document.getElementById('welcome').style.display = '';
+  }
+
+  function switchChat(idx) {
+    activeIdx = idx;
+    renderChatList();
+    renderMessages();
+    updateStats();
+    const t = sessions[idx].title;
+    document.getElementById('chatTitle').textContent = t === 'New Chat' ? 'New Conversation' : t;
+  }
+
+  function renderChatList() {
+    const el = document.getElementById('chatList');
+    if (!sessions.length) {
+      el.innerHTML = `<div style="padding:12px 16px;font-size:0.78rem;color:var(--text-muted)">No chats yet</div>`;
+      return;
+    }
+    el.innerHTML = sessions.map((s, i) => `
+      <div class="chat-item ${i === activeIdx ? 'active' : ''}" onclick="switchChat(${i})">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+        </svg>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${escHtml(s.title)}</span>
+      </div>
+    `).join('');
+  }
+
+  // ── RENDER MESSAGES ──
+  function renderMessages() {
+    if (activeIdx === null) return;
+    const msgs = sessions[activeIdx].messages;
+    const area = document.getElementById('chatArea');
+    const welcome = document.getElementById('welcome');
+
+    if (!msgs.length) {
+      welcome.style.display = '';
+      // Remove old bubbles
+      area.querySelectorAll('.msg').forEach(el => el.remove());
+      return;
+    }
+
+    welcome.style.display = 'none';
+    area.querySelectorAll('.msg').forEach(el => el.remove());
+
+    msgs.forEach(m => area.appendChild(buildBubble(m.role, m.content, m.time)));
+    scrollBottom();
+  }
+
+  function buildBubble(role, content, time) {
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    const isAI = role === 'ai';
+    div.innerHTML = `
+      <div class="avatar ${role}">${isAI ? '🤖' : 'U'}</div>
+      <div>
+        <div class="bubble-meta">
+          <span class="bubble-name">${isAI ? 'RupaxAI' : 'You'}</span>
+          <span class="bubble-time">${time || ''}</span>
+        </div>
+        <div class="bubble">${formatContent(content)}</div>
+      </div>
+    `;
+    return div;
+  }
+
+  function formatContent(text) {
+    // Code blocks
+    text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre style="background:#070b14;border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;margin:8px 0;font-size:0.82rem"><code style="color:#e2e8f0">${escHtml(code.trim())}</code></pre>`
+    );
+    // Inline code
+    text = text.replace(/`([^`]+)`/g, `<code style="background:#1a2235;padding:2px 6px;border-radius:4px;font-size:0.85em;color:#c084fc">$1</code>`);
+    // Bold
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Newlines
+    text = text.replace(/\n/g, '<br>');
+    return text;
+  }
+
+  // ── SEND ──
+  async function sendMessage() {
+    if (isLoading) return;
+    const input = document.getElementById('userInput');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    hideError();
+
+    // Ensure a session exists
+    if (activeIdx === null) newChat();
+
+    input.value = '';
+    autoResize(input);
+
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    sessions[activeIdx].messages.push({ role: 'user', content: text, time });
+
+    // Auto-title
+    if (sessions[activeIdx].title === 'New Chat') {
+      sessions[activeIdx].title = text.length > 36 ? text.slice(0, 36) + '…' : text;
+      renderChatList();
+      document.getElementById('chatTitle').textContent = sessions[activeIdx].title;
+    }
+
+    totalMsgs++;
+    updateStats();
+    renderMessages();
+
+    // Typing indicator
+    const area = document.getElementById('chatArea');
+    const typing = document.createElement('div');
+    typing.className = 'msg ai';
+    typing.id = 'typing';
+    typing.innerHTML = `
+      <div class="avatar ai">🤖</div>
+      <div><div class="bubble">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      </div></div>
+    `;
+    area.appendChild(typing);
+    scrollBottom();
+
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+    const t0 = performance.now();
+
+    try {
+      const history = sessions[activeIdx].messages
+        .filter(m => m.role !== 'typing')
+        .slice(-20)
+        .map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.content }));
+
+      const resp = await fetch(`${OLLAMA_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: history,
+          stream: true
+        })
+      });
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let aiText = '';
+
+      // Replace typing indicator with streaming bubble
+      typing.remove();
+      const streamDiv = document.createElement('div');
+      streamDiv.className = 'msg ai';
+      const aiTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      streamDiv.innerHTML = `
+        <div class="avatar ai">🤖</div>
+        <div>
+          <div class="bubble-meta">
+            <span class="bubble-name">RupaxAI</span>
+            <span class="bubble-time">${aiTime}</span>
+          </div>
+          <div class="bubble" id="streamBubble"></div>
+        </div>
+      `;
+      area.appendChild(streamDiv);
+      scrollBottom();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines  = chunk.split('\n').filter(Boolean);
+
+        for (const line of lines) {
+          try {
+            const json = JSON.parse(line);
+            if (json.message?.content) {
+              aiText += json.message.content;
+              document.getElementById('streamBubble').innerHTML = formatContent(aiText);
+              scrollBottom();
+            }
+          } catch {}
+        }
+      }
+
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      sessions[activeIdx].messages.push({ role: 'ai', content: aiText, time: aiTime });
+      totalMsgs++;
+      totalTokens += Math.ceil(aiText.split(/\s+/).length * 1.3);
+      speak(aiText);
+      document.getElementById('statSpeed').textContent = elapsed + 's';
+      updateStats();
+      saveSessions();
+
+    } catch (err) {
+      typing.remove();
+      if (err.name === 'TypeError') {
+        showError('Cannot connect to Ollama. Make sure it\'s running: <strong>ollama serve</strong>');
+      } else {
+        showError(`Error: ${err.message}`);
+      }
+    } finally {
+      isLoading = false;
+      document.getElementById('sendBtn').disabled = false;
+      input.focus();
+    }
+  }
+
+  function sendSuggestion(btn) {
+    document.getElementById('userInput').value = btn.textContent;
+    sendMessage();
+  }
+
+  // ── UTILS ──
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }
+
+  function scrollBottom() {
+    const area = document.getElementById('chatArea');
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function updateStats() {
+    const msgs = activeIdx !== null ? sessions[activeIdx].messages.length : 0;
+    document.getElementById('statMsgs').textContent   = msgs;
+    document.getElementById('statTokens').textContent = totalTokens;
+    document.getElementById('tokenPill').textContent  = `${totalTokens} tokens`;
+    document.getElementById('msgPill').textContent    = `${msgs} messages`;
+  }
+
+  function showError(html) {
+    const b = document.getElementById('errorBanner');
+    document.getElementById('errorText').innerHTML = html;
+    b.classList.add('show');
+  }
+
+  function hideError() {
+    document.getElementById('errorBanner').classList.remove('show');
+  }
+</script>
+</body>
+</html>
